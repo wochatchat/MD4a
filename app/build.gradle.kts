@@ -38,7 +38,14 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("release")
+            // Only sign when the CI-decoded signing.properties actually exists;
+            // otherwise (local dev / compile-check) fall back to debug signing.
+            val release = signingConfigs.getByName("release")
+            if (release.storeFile != null) {
+                signingConfig = release
+            } else {
+                signingConfig = signingConfigs.getByName("debug")
+            }
         }
     }
     compileOptions {
