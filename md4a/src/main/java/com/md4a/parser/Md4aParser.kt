@@ -75,7 +75,7 @@ internal object Md4aParser {
     // ── Blocks ──────────────────────────────────────────────────────────
 
     private fun blockChildren(parent: Node, taskInside: Boolean): List<MdBlock> =
-        parent.children().mapNotNull { block(it, taskInside) }
+        parent.children().mapNotNull { block(it, taskInside) }.toList()
 
     private fun block(node: Node, taskInside: Boolean): MdBlock? = when (node) {
         is Heading -> MdHeading(node.level, inlines(node))
@@ -114,7 +114,7 @@ internal object Md4aParser {
             items.add(MdListItem(ordered, if (ordered) index else null, task, checked, blockChildren(li, taskInside = task != null)))
             if (ordered) index++
         }
-        return ListItemWrapper(items)
+        return MdList(items)
     }
 
     private fun findTaskMarker(first: Node): TaskListItemMarker? = when (first) {
@@ -132,7 +132,7 @@ internal object Md4aParser {
                 row.children().filterIsInstance<TableCell>().map { cell ->
                     MdCell(inlineChildren(cell, stripTaskMarker = false))
                 }
-            } ?: emptyList()
+            }?.toList() ?: emptyList()
 
         // Alignment is per-column; read it from the header cells when present.
         val aligns = head?.children()?.filterIsInstance<TableRow>()?.firstOrNull()
@@ -143,7 +143,7 @@ internal object Md4aParser {
                     org.commonmark.ext.gfm.tables.TableCell.Alignment.RIGHT -> MdTable.Align.RIGHT
                     else -> MdTable.Align.LEFT
                 }
-            } ?: emptyList()
+            }?.toList() ?: emptyList()
 
         val header = rowsOf(head).firstOrNull() ?: emptyList()
         val rows = rowsOf(body)
