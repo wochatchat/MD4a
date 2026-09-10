@@ -1,7 +1,7 @@
 package com.md4a
 
 import com.md4a.ast.MdBlock
-import com.md4a.internal.Md4aParser
+import com.md4a.parser.Md4aParser
 
 /**
  * MD4a — a mobile-first GitHub Flavored Markdown parser + renderer for Android.

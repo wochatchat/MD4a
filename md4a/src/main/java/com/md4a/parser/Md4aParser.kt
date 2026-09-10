@@ -1,4 +1,4 @@
-package com.md4a
+package com.md4a.parser
 
 import com.md4a.ast.MdBlock
 import com.md4a.ast.MdBlockQuote
@@ -190,7 +190,7 @@ internal object Md4aParser {
         }
     }
 
-    private fun Node.children(): Iterable<Node> = this // Node implements Iterable<Node>
+    private fun Node.children(): Sequence<Node> = generateSequence(firstChild) { it.next }
 
     private fun altText(image: Node): String = buildString {
         for (child in image.children()) {
@@ -201,8 +201,4 @@ internal object Md4aParser {
         }
     }
 }
-e fun Node.children(): Iterable<Node> = this // Node implements Iterable<Node>
 
-    /** Internal: items of a list kept together for indent rendering. */
-    data class ListItemWrapper(val items: List<MdListItem>) : MdBlock
-}

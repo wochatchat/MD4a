@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -282,8 +283,8 @@ fun rememberMd4aImageLoader(): ImageLoader {
     return remember {
         ImageLoader.Builder(context)
             .components {
-                add(SvgDecoder(context))
-                add(GifDecoder())
+                add(SvgDecoder.Factory())
+                add(GifDecoder.Factory())
             }
             .crossfade(false)
             .build()
@@ -494,7 +495,7 @@ private fun QuoteView(
     onLinkClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(modifier = modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min)) {
+    Row(modifier = modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
         Box(
             modifier = Modifier
                 .padding(top = 2.dp, bottom = 2.dp)
