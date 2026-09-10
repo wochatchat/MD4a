@@ -1,0 +1,87 @@
+name: Build Release APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: md4a-release-main
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 30
+          fetch-tags: true
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # Keystore decoded from repo secrets at build time; missing secret →
+      # warning + unsigned APK (same policy as PocketHub).
+      - name: Decode signing keystore from repo secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEYSTORE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::warning::KEYSTORE_BASE64 secret not set — building UNSIGNED release APK"
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
+          {
+            echo "STORE_FILE=release.keystore"
+            echo "STORE_PASSWORD=$STORE_PASSWORD"
+            echo "KEY_ALIAS=$KEY_ALIAS"
+            echo "KEY_PASSWORD=$KEY_PASSWORD"
+          } > signing.properties
+          chmod 600 release.keystore signing.properties
+
+      - name: Build release APK (auto-bump version)
+        run: |
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: md4a-apk
+          path: apk/*.apk
+          if-no-files-found: error
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add version.properties
+          git commit -m "chore: release v$(grep '^versionName=' version.properties | cut -d= -f2) [skip ci]" || true
+          git push
+
+      - name: Create GitHub Release with APK asset
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION_NAME=$(grep '^versionName=' version.properties | cut -d= -f2)
+          APK=$(ls apk/md4a-${VERSION_NAME}.apk 2>/dev/null | head -1)
+          [ -z "$APK" ] && { echo "No APK found, skipping release"; exit 0; }
+
+          gh release delete "v${VERSION_NAME}" --yes --cleanup-tag 2>/dev/null || true
+          gh release create "v${VERSION_NAME}" "$APK" \
+            --title "MD4a v${VERSION_NAME}" \
+            --notes "MD4a ${VERSION_NAME} — markdown/README renderer SDK + demo app. APK attached as asset."

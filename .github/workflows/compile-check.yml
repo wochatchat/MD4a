@@ -1,0 +1,36 @@
+name: Compile Check
+
+# Feature/fix branches: compile validation only.
+on:
+  push:
+    branches: [fix, 'refactor/**', 'feature/**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: compile-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Compile release
+        run: ./gradlew :app:assembleRelease :md4a:assembleRelease --no-daemon
+
+      - name: Run unit tests
+        run: ./gradlew :md4a:testReleaseUnitTest --no-daemon
