@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -22,7 +24,7 @@ android {
             // CI materializes signing.properties on the runner; local builds stay unsigned.
             val sp = rootProject.file("signing.properties")
             if (sp.exists()) {
-                val props = java.util.Properties().apply { sp.inputStream().use { load(it) } }
+                val props = Properties().apply { sp.inputStream().use { load(it) } }
                 storeFile = rootProject.file(props.getProperty("STORE_FILE"))
                 storePassword = props.getProperty("STORE_PASSWORD")
                 keyAlias = props.getProperty("KEY_ALIAS")
