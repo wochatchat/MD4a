@@ -156,10 +156,10 @@ internal object Md4aParser {
             is SoftLineBreak -> out.add(MdText(" "))
             is HardLineBreak -> out.add(MdHardBreak)
             is Code -> out.add(MdCodeSpan(node.literal ?: ""))
-            is Emphasis -> out.add(MdEmphasis(false, inlineChildren(node, false)))
-            is StrongEmphasis -> out.add(MdEmphasis(true, inlineChildren(node, false)))
-            is Strikethrough -> out.add(MdStrikethrough(inlineChildren(node, false)))
-            is Link -> out.add(MdLink(inlineChildren(node, false), node.destination ?: "", node.title))
+            is Emphasis -> out.add(MdEmphasis(false, inlineChildren(node)))
+            is StrongEmphasis -> out.add(MdEmphasis(true, inlineChildren(node)))
+            is Strikethrough -> out.add(MdStrikethrough(inlineChildren(node)))
+            is Link -> out.add(MdLink(inlineChildren(node), node.destination ?: "", node.title))
             is Image -> out.add(MdImage(node.destination ?: "", altText(node)))
             is HtmlInline -> {
                 // Keep the few tags mobile text can actually honor; drop the rest.
