@@ -131,7 +131,7 @@ internal object Md4aParser {
             parent?.children()?.filterIsInstance<TableRow>()?.map { row ->
                 row.children().filterIsInstance<TableCell>().map { cell ->
                     MdCell(inlineChildren(cell, stripTaskMarker = false))
-                }
+                }.toList()
             }?.toList() ?: emptyList()
 
         // Alignment is per-column; read it from the header cells when present.
