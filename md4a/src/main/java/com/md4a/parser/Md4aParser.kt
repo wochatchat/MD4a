@@ -69,26 +69,26 @@ internal object Md4aParser {
 
     fun parse(markdown: String): List<MdBlock> {
         val doc = parser.parse(markdown)
-        return blockChildren(doc, taskInside = false)
+        return blockChildren(doc)
     }
 
     // ── Blocks ──────────────────────────────────────────────────────────
 
-    private fun blockChildren(parent: Node, taskInside: Boolean): List<MdBlock> =
-        parent.children().mapNotNull { block(it, taskInside) }.toList()
+    private fun blockChildren(parent: Node): List<MdBlock> =
+        parent.children().mapNotNull { block(it) }.toList()
 
-    private fun block(node: Node, taskInside: Boolean): MdBlock? = when (node) {
+    private fun block(node: Node): MdBlock? = when (node) {
         is Heading -> MdHeading(node.level, inlines(node))
-        is Paragraph -> MdParagraph(inlines(node, stripTaskMarker = taskInside))
+        is Paragraph -> MdParagraph(inlines(node))
         is FencedCodeBlock -> MdCode(langOf(node.info), node.literal ?: "")
         is IndentedCodeBlock -> MdCode(null, node.literal ?: "")
-        is BlockQuote -> MdBlockQuote(blockChildren(node, false))
+        is BlockQuote -> MdBlockQuote(blockChildren(node))
         is ThematicBreak -> MdThematicBreak
         is HtmlBlock -> MdHtmlBlock(node.literal ?: "")
         is BulletList -> listItems(node, ordered = false, start = null)
         is OrderedList -> listItems(node, ordered = true, start = node.startNumber)
         is org.commonmark.ext.gfm.tables.TableBlock -> table(node)
-        else -> null
+        else -> null // TaskListItemMarker and other extension-only nodes
     }
 
     private fun langOf(info: String?): String? =
@@ -99,28 +99,14 @@ internal object Md4aParser {
         val items = mutableListOf<MdListItem>()
         for (li in list.children()) {
             li as ListItem
-            // GFM task list: a TaskListItemMarker as the first inline of the
-            // first paragraph marks the item as a checkbox.
-            var task: Boolean? = null
-            var checked = false
-            val firstPara = li.firstChild as? Paragraph
-            if (firstPara != null) {
-                val marker = firstPara.firstChild?.let { findTaskMarker(it) }
-                if (marker != null) {
-                    task = marker.isChecked
-                    checked = marker.isChecked
-                }
-            }
-            items.add(MdListItem(ordered, if (ordered) index else null, task, checked, blockChildren(li, taskInside = task != null)))
+            // GFM task list: the extension emits a block-level
+            // TaskListItemMarker as the first child of the ListItem.
+            val marker = li.firstChild as? TaskListItemMarker
+            val checked = marker?.isChecked ?: false
+            items.add(MdListItem(ordered, if (ordered) index else null, marker?.isChecked, checked, blockChildren(li)))
             if (ordered) index++
         }
         return MdList(items)
-    }
-
-    private fun findTaskMarker(first: Node): TaskListItemMarker? = when (first) {
-        is TaskListItemMarker -> first
-        is Text -> if (first.literal?.startsWith("[ ]") == true || first.literal?.startsWith("[x]") == true) null else null
-        else -> null
     }
 
     private fun table(node: org.commonmark.ext.gfm.tables.TableBlock): MdTable {
@@ -130,7 +116,7 @@ internal object Md4aParser {
         fun rowsOf(parent: Node?): List<List<MdCell>> =
             parent?.children()?.filterIsInstance<TableRow>()?.map { row ->
                 row.children().filterIsInstance<TableCell>().map { cell ->
-                    MdCell(inlineChildren(cell, stripTaskMarker = false))
+                    MdCell(inlineChildren(cell))
                 }.toList()
             }?.toList() ?: emptyList()
 
@@ -154,17 +140,11 @@ internal object Md4aParser {
 
     // ── Inlines ─────────────────────────────────────────────────────────
 
-    private fun inlines(parent: Node, stripTaskMarker: Boolean = false): List<MdInline> =
-        inlineChildren(parent, stripTaskMarker)
+    private fun inlines(parent: Node): List<MdInline> = inlineChildren(parent)
 
-    private fun inlineChildren(parent: Node, stripTaskMarker: Boolean): List<MdInline> {
+    private fun inlineChildren(parent: Node): List<MdInline> {
         val out = mutableListOf<MdInline>()
-        var skippedTaskMarker = false
         for (child in parent.children()) {
-            if (stripTaskMarker && !skippedTaskMarker && child is TaskListItemMarker) {
-                skippedTaskMarker = true
-                continue
-            }
             inline(child, out)
         }
         return out

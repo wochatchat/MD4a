@@ -119,6 +119,7 @@ object CodeHighlighter {
             """<!--.*?-->""",                  // HTML comments
             """/\*[\s\S]*?\*/""",              // block comments
             """//[^\n]*""",                    // line comments (C-like)
+            """#[0-9a-fA-F]{3,8}\b""",          // CSS hex colors (before # comments)
             """#[^\n]*""",                     // line comments (# langs; also YAML comments)
             """"(?:\\.|[^"\\\n])*"""",         // double-quoted strings
             """'(?:\\.|[^'\\\n])*'""",         // single-quoted strings
@@ -149,8 +150,8 @@ object CodeHighlighter {
                 value.startsWith("<!--") -> TokenType.COMMENT
                 value.startsWith("/*") -> TokenType.COMMENT
                 value.startsWith("//") && lang !in HASH_LANGS -> TokenType.COMMENT
-                value.startsWith("#") && (lang in HASH_LANGS || lang.isEmpty()) -> TokenType.COMMENT
-                value.startsWith("#") -> TokenType.NUMBER.takeIf { value matches Regex("#[0-9a-fA-F]{3,8}") } ?: TokenType.COMMENT
+                value.startsWith("#") ->
+                    if (value matches Regex("#[0-9a-fA-F]{3,8}")) TokenType.NUMBER else TokenType.COMMENT
                 value.startsWith("\"") || value.startsWith("'") || value.startsWith("`") -> TokenType.STRING
                 value.startsWith("0x") || value.first().isDigit() -> TokenType.NUMBER
                 else -> TokenType.KEYWORD
