@@ -4,23 +4,14 @@ import com.md4a.ast.MdBlock
 import com.md4a.ast.MdBlockQuote
 import com.md4a.ast.MdCell
 import com.md4a.ast.MdCode
-import com.md4a.ast.MdCodeSpan
-import com.md4a.ast.MdEmphasis
-import com.md4a.ast.MdHardBreak
 import com.md4a.ast.MdHeading
-import com.md4a.ast.MdHtmlBlock
-import com.md4a.ast.MdHtmlInline
-import com.md4a.ast.MdImage
 import com.md4a.ast.MdInline
-import com.md4a.ast.MdLink
 import com.md4a.ast.MdList
 import com.md4a.ast.MdListItem
 import com.md4a.ast.MdParagraph
-import com.md4a.ast.MdStrikethrough
 import com.md4a.ast.MdTable
-import com.md4a.ast.MdText
 import com.md4a.ast.MdThematicBreak
-import org.commonmark.ext.gfm.strikethrough.Strikethrough
+import org.commonmark.node.BlockQuote
 import org.commonmark.ext.gfm.tables.TableBody
 import org.commonmark.ext.gfm.tables.TableCell
 import org.commonmark.ext.gfm.tables.TableHead
@@ -28,15 +19,11 @@ import org.commonmark.ext.gfm.tables.TableRow
 import org.commonmark.ext.gfm.tables.TablesExtension
 import org.commonmark.ext.task.list.items.TaskListItemMarker
 import org.commonmark.ext.autolink.AutolinkExtension
-import org.commonmark.node.BlockQuote
 import org.commonmark.node.BulletList
 import org.commonmark.node.Code
-import org.commonmark.node.Emphasis
 import org.commonmark.node.FencedCodeBlock
-import org.commonmark.node.HardLineBreak
 import org.commonmark.node.Heading
 import org.commonmark.node.HtmlBlock
-import org.commonmark.node.HtmlInline
 import org.commonmark.node.Image
 import org.commonmark.node.IndentedCodeBlock
 import org.commonmark.node.Link
@@ -44,9 +31,6 @@ import org.commonmark.node.ListItem
 import org.commonmark.node.Node
 import org.commonmark.node.OrderedList
 import org.commonmark.node.Paragraph
-import org.commonmark.node.SoftLineBreak
-import org.commonmark.node.StrongEmphasis
-import org.commonmark.node.Text
 import org.commonmark.node.ThematicBreak
 import org.commonmark.parser.Parser
 
@@ -75,20 +59,22 @@ internal object Md4aParser {
     // ── Blocks ──────────────────────────────────────────────────────────
 
     private fun blockChildren(parent: Node): List<MdBlock> =
-        parent.children().mapNotNull { block(it) }.toList()
+        parent.children().flatMap { block(it) }.toList()
 
-    private fun block(node: Node): MdBlock? = when (node) {
-        is Heading -> MdHeading(node.level, inlines(node))
-        is Paragraph -> MdParagraph(inlines(node))
-        is FencedCodeBlock -> MdCode(langOf(node.info), node.literal ?: "")
-        is IndentedCodeBlock -> MdCode(null, node.literal ?: "")
-        is BlockQuote -> MdBlockQuote(blockChildren(node))
-        is ThematicBreak -> MdThematicBreak
-        is HtmlBlock -> MdHtmlBlock(node.literal ?: "")
-        is BulletList -> listItems(node, ordered = false, start = null)
-        is OrderedList -> listItems(node, ordered = true, start = node.startNumber)
-        is org.commonmark.ext.gfm.tables.TableBlock -> table(node)
-        else -> null // TaskListItemMarker and other extension-only nodes
+    private fun block(node: Node): List<MdBlock> = when (node) {
+        is Heading -> listOf(MdHeading(node.level, inlines(node)))
+        is Paragraph -> listOf(MdParagraph(inlines(node)))
+        is FencedCodeBlock -> listOf(MdCode(langOf(node.info), node.literal ?: ""))
+        is IndentedCodeBlock -> listOf(MdCode(null, node.literal ?: ""))
+        is BlockQuote -> listOf(MdBlockQuote(blockChildren(node)))
+        is ThematicBreak -> listOf(MdThematicBreak)
+        // Raw HTML converted into real blocks (headings/tables/images/…);
+        // unconvertible junk is dropped rather than dumped as text.
+        is HtmlBlock -> HtmlAdapters.convertBlock(node.literal ?: "")
+        is BulletList -> listOf(listItems(node, ordered = false, start = null))
+        is OrderedList -> listOf(listItems(node, ordered = true, start = node.startNumber))
+        is org.commonmark.ext.gfm.tables.TableBlock -> listOf(table(node))
+        else -> emptyList() // TaskListItemMarker and other extension-only nodes
     }
 
     private fun langOf(info: String?): String? =
@@ -143,42 +129,15 @@ internal object Md4aParser {
     private fun inlines(parent: Node): List<MdInline> = inlineChildren(parent)
 
     private fun inlineChildren(parent: Node): List<MdInline> {
-        val out = mutableListOf<MdInline>()
+        // Inline HTML (<a>, <img>, <kbd>, <br>, …) is stitched into real
+        // nodes by InlineSink instead of being dropped.
+        val sink = HtmlAdapters.InlineSink()
         for (child in parent.children()) {
-            inline(child, out)
+            sink.feed(child)
         }
-        return out
-    }
-
-    private fun inline(node: Node, out: MutableList<MdInline>) {
-        when (node) {
-            is Text -> out.add(MdText(node.literal ?: ""))
-            is SoftLineBreak -> out.add(MdText(" "))
-            is HardLineBreak -> out.add(MdHardBreak)
-            is Code -> out.add(MdCodeSpan(node.literal ?: ""))
-            is Emphasis -> out.add(MdEmphasis(false, inlineChildren(node)))
-            is StrongEmphasis -> out.add(MdEmphasis(true, inlineChildren(node)))
-            is Strikethrough -> out.add(MdStrikethrough(inlineChildren(node)))
-            is Link -> out.add(MdLink(inlineChildren(node), node.destination ?: "", node.title))
-            is Image -> out.add(MdImage(node.destination ?: "", altText(node)))
-            is HtmlInline -> {
-                // Keep the few tags mobile text can actually honor; drop the rest.
-                val tag = node.literal?.lowercase() ?: return
-                if (tag.startsWith("<br")) out.add(MdHardBreak)
-            }
-            else -> Unit
-        }
+        return sink.finish()
     }
 
     private fun Node.children(): Sequence<Node> = generateSequence(firstChild) { it.next }
-
-    private fun altText(image: Node): String = buildString {
-        for (child in image.children()) {
-            when (child) {
-                is Text -> append(child.literal)
-                is Code -> append(child.literal)
-            }
-        }
-    }
 }
 

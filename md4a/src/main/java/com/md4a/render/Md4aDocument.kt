@@ -234,9 +234,15 @@ private fun ParagraphView(
 }
 
 private fun splitImages(inlines: List<MdInline>): Pair<List<MdInline>, List<MdImage>> {
-    val images = inlines.filterIsInstance<MdImage>()
-    if (images.isEmpty()) return inlines to emptyList()
-    val text = inlines.filter { it !is MdImage }
+    // Hero headers/badge rows wrap images in links: `<a href><img/></a>` —
+    // render the image itself at block level (the href is rarely worth a tap).
+    val unwrapped = inlines.map { inline ->
+        val inner = (inline as? MdLink)?.children
+        if (inner != null && inner.size == 1 && inner[0] is MdImage) inner[0] else inline
+    }
+    val images = unwrapped.filterIsInstance<MdImage>()
+    if (images.isEmpty()) return unwrapped to emptyList()
+    val text = unwrapped.filter { it !is MdImage }
         .filterNot { it is MdText && it.text.isBlank() || it is MdHardBreak }
     return text to images
 }
@@ -252,14 +258,25 @@ fun Md4aImage(
     var ratio by androidx.compose.runtime.remember(url) {
         androidx.compose.runtime.mutableStateOf<Float?>(null)
     }
+    // Badge services serve tiny wide banners; stretching them to full width
+    // would blow a 20px-tall badge up to screen width.
+    val isBadge = url.contains("shields.io") || url.contains("/badge/") || url.contains("badgen.net")
     AsyncImage(
         model = url,
         contentDescription = alt.ifEmpty { null },
         imageLoader = imageLoader,
         modifier = modifier
-            .fillMaxWidth()
             .then(
-                if (ratio != null) Modifier.aspectRatio(ratio!!) else Modifier.heightIn(min = 60.dp, max = 260.dp)
+                if (isBadge) {
+                    Modifier.height(22.dp)
+                } else {
+                    Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (ratio != null) Modifier.aspectRatio(ratio!!)
+                            else Modifier.heightIn(min = 60.dp, max = 260.dp)
+                        )
+                }
             )
             .clip(RoundedCornerShape(6.dp))
             .background(colorScheme.imagePlaceholder),
