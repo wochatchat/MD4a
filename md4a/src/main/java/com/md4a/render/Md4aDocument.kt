@@ -56,6 +56,7 @@ import com.md4a.ast.MdHeading
 import com.md4a.ast.MdHtmlBlock
 import com.md4a.ast.MdImage
 import com.md4a.ast.MdInline
+import com.md4a.ast.extractBlockImages
 import com.md4a.ast.MdLink
 import com.md4a.ast.MdList
 import com.md4a.ast.MdListItem
@@ -140,7 +141,7 @@ private fun BlockView(
     modifier: Modifier = Modifier,
 ) {
     when (block) {
-        is MdHeading -> HeadingView(block, colorScheme, typography, onLinkClick, modifier)
+        is MdHeading -> HeadingView(block, colorScheme, typography, baseUrl, imageLoader, onLinkClick, modifier)
         is MdParagraph -> ParagraphView(block, colorScheme, typography, baseUrl, imageLoader, onLinkClick, modifier)
         is MdCode -> CodeBlockView(block, colorScheme, typography, modifier)
         is MdTable -> TableView(block, colorScheme, typography, baseUrl, imageLoader, onLinkClick, modifier)
@@ -175,21 +176,27 @@ private fun HeadingView(
     heading: MdHeading,
     scheme: Md4aColorScheme,
     typography: Md4aTypography,
+    baseUrl: String?,
+    imageLoader: ImageLoader,
     onLinkClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val (textInlines, images) = remember(heading) { extractBlockImages(heading.inlines) }
     Column(modifier = modifier.fillMaxWidth().padding(top = 6.dp)) {
-        Md4aInlineText(
-            inlines = heading.inlines,
-            colorScheme = scheme,
-            typography = typography,
-            style = when (heading.level) {
-                1 -> typography.h1; 2 -> typography.h2; 3 -> typography.h3
-                4 -> typography.h4; 5 -> typography.h5; else -> typography.h6
-            },
-            color = scheme.text,
-            onLinkClick = onLinkClick,
-        )
+        if (textInlines.isNotEmpty()) {
+            Md4aInlineText(
+                inlines = textInlines,
+                colorScheme = scheme,
+                typography = typography,
+                style = when (heading.level) {
+                    1 -> typography.h1; 2 -> typography.h2; 3 -> typography.h3
+                    4 -> typography.h4; 5 -> typography.h5; else -> typography.h6
+                },
+                color = scheme.text,
+                onLinkClick = onLinkClick,
+            )
+        }
+        Md4aImageList(images, scheme, baseUrl, imageLoader)
         if (heading.level <= 2) {
             HorizontalDivider(
                 modifier = Modifier.padding(top = 5.dp),
@@ -222,33 +229,33 @@ private fun ParagraphView(
                 onLinkClick = onLinkClick,
             )
         }
-        images.forEach { image ->
-            Md4aImage(
-                url = resolveUrl(image.url, baseUrl),
-                alt = image.alt,
-                widthDp = image.widthDp,
-                heightDp = image.heightDp,
-                colorScheme = scheme,
-                imageLoader = imageLoader,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-        }
+        Md4aImageList(images, scheme, baseUrl, imageLoader)
     }
 }
 
-private fun splitImages(inlines: List<MdInline>): Pair<List<MdInline>, List<MdImage>> {
-    // Hero headers/badge rows wrap images in links: `<a href><img/></a>` —
-    // render the image itself at block level (the href is rarely worth a tap).
-    val unwrapped = inlines.map { inline ->
-        val inner = (inline as? MdLink)?.children
-        if (inner != null && inner.size == 1 && inner[0] is MdImage) inner[0] else inline
+// Shared image list for paragraph/heading/table-cell extraction results.
+@Composable
+private fun Md4aImageList(
+    images: List<MdImage>,
+    scheme: Md4aColorScheme,
+    baseUrl: String?,
+    imageLoader: ImageLoader,
+) {
+    images.forEach { image ->
+        Md4aImage(
+            url = resolveUrl(image.url, baseUrl),
+            alt = image.alt,
+            widthDp = image.widthDp,
+            heightDp = image.heightDp,
+            colorScheme = scheme,
+            imageLoader = imageLoader,
+            modifier = Modifier.padding(top = 4.dp),
+        )
     }
-    val images = unwrapped.filterIsInstance<MdImage>()
-    if (images.isEmpty()) return unwrapped to emptyList()
-    val text = unwrapped.filter { it !is MdImage }
-        .filterNot { it is MdText && it.text.isBlank() || it is MdHardBreak }
-    return text to images
 }
+
+private fun splitImages(inlines: List<MdInline>): Pair<List<MdInline>, List<MdImage>> =
+    extractBlockImages(inlines)
 
 @Composable
 fun Md4aImage(
@@ -448,14 +455,20 @@ private fun androidx.compose.foundation.layout.RowScope.TableCell(
             .background(background)
             .padding(horizontal = 10.dp, vertical = 8.dp),
     ) {
-        Md4aInlineText(
-            inlines = inlines,
-            colorScheme = scheme,
-            typography = typography,
-            style = typography.tableCell,
-            modifier = Modifier.fillMaxWidth(),
-            onLinkClick = onLinkClick,
-        )
+        val (textInlines, images) = remember(inlines) { extractBlockImages(inlines) }
+        Column(modifier = Modifier.fillMaxWidth()) {
+            if (textInlines.isNotEmpty()) {
+                Md4aInlineText(
+                    inlines = textInlines,
+                    colorScheme = scheme,
+                    typography = typography,
+                    style = typography.tableCell,
+                    modifier = Modifier.fillMaxWidth(),
+                    onLinkClick = onLinkClick,
+                )
+            }
+            Md4aImageList(images, scheme, baseUrl, imageLoader)
+        }
     }
 }
 
