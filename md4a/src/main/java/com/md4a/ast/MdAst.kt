@@ -46,6 +46,6 @@ data class MdEmphasis(val strong: Boolean, val children: List<MdInline>) : MdInl
 data class MdStrikethrough(val children: List<MdInline>) : MdInline
 data class MdCodeSpan(val code: String) : MdInline
 data class MdLink(val children: List<MdInline>, val url: String, val title: String?) : MdInline
-data class MdImage(val url: String, val alt: String) : MdInline
+data class MdImage(val url: String, val alt: String, val widthDp: Int? = null, val heightDp: Int? = null) : MdInline
 data object MdHardBreak : MdInline
 data class MdHtmlInline(val raw: String) : MdInline

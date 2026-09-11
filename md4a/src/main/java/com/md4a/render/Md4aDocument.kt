@@ -225,6 +225,8 @@ private fun ParagraphView(
             Md4aImage(
                 url = resolveUrl(image.url, baseUrl),
                 alt = image.alt,
+                widthDp = image.widthDp,
+                heightDp = image.heightDp,
                 colorScheme = scheme,
                 imageLoader = imageLoader,
                 modifier = Modifier.padding(top = 4.dp),
@@ -254,6 +256,8 @@ fun Md4aImage(
     colorScheme: Md4aColorScheme,
     imageLoader: ImageLoader,
     modifier: Modifier = Modifier,
+    widthDp: Int? = null,
+    heightDp: Int? = null,
 ) {
     var ratio by androidx.compose.runtime.remember(url) {
         androidx.compose.runtime.mutableStateOf<Float?>(null)
@@ -261,23 +265,30 @@ fun Md4aImage(
     // Badge services serve tiny wide banners; stretching them to full width
     // would blow a 20px-tall badge up to screen width.
     val isBadge = url.contains("shields.io") || url.contains("/badge/") || url.contains("badgen.net")
+    // Size precedence: explicit width/height attr > badge heuristic > intrinsic ratio.
+    // Tall/square images (ratio < 1.4) are capped at 260dp height instead of
+    // being blown up to full screen width (SVG logos without width attr).
+    val sizeModifier = when {
+        widthDp != null -> Modifier
+            .width(widthDp.coerceAtMost(340).dp)
+            .then(
+                if (ratio != null) Modifier.height((widthDp / ratio).dp)
+                else Modifier.heightIn(min = 24.dp, max = 260.dp)
+            )
+        heightDp != null -> Modifier
+            .height(heightDp.coerceAtMost(260).dp)
+            .then(if (ratio != null) Modifier.aspectRatio(ratio) else Modifier.fillMaxWidth())
+        isBadge -> Modifier.height(22.dp)
+        ratio != null && ratio >= 1.4f -> Modifier.fillMaxWidth().aspectRatio(ratio)
+        ratio != null -> Modifier.height(260.dp).aspectRatio(ratio)
+        else -> Modifier.fillMaxWidth().heightIn(min = 60.dp, max = 260.dp)
+    }
     AsyncImage(
         model = url,
         contentDescription = alt.ifEmpty { null },
         imageLoader = imageLoader,
         modifier = modifier
-            .then(
-                if (isBadge) {
-                    Modifier.height(22.dp)
-                } else {
-                    Modifier
-                        .fillMaxWidth()
-                        .then(
-                            if (ratio != null) Modifier.aspectRatio(ratio!!)
-                            else Modifier.heightIn(min = 60.dp, max = 260.dp)
-                        )
-                }
-            )
+            .then(sizeModifier)
             .clip(RoundedCornerShape(6.dp))
             .background(colorScheme.imagePlaceholder),
         onSuccess = { state ->

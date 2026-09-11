@@ -89,6 +89,14 @@ class Md4aParserTest {
         val img = link.children.filterIsInstance<MdImage>().single()
         assertEquals("https://x/logo.png", img.url)
         assertEquals("Ionic", img.alt)
+        assertEquals(60, img.widthDp)
+    }
+
+    @Test
+    fun `image width percent attr is ignored`() {
+        val img = parse("<img src=\"https://x/a.svg\" width=\"50%\" />").single() as MdParagraph
+        val image = img.inlines.filterIsInstance<MdImage>().single()
+        assertEquals(null, image.widthDp)
     }
 
     @Test

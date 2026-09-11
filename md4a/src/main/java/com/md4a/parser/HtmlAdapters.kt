@@ -111,7 +111,7 @@ internal object HtmlAdapters {
             when (name) {
                 "img" -> {
                     val src = attrs["src"] ?: attrs["srcset"]?.trim()?.substringBefore(' ') ?: return
-                    emit(MdImage(decodeEntities(src), decodeEntities(attrs["alt"] ?: "")))
+                    emit(MdImage(decodeEntities(src), decodeEntities(attrs["alt"] ?: ""), pxLen(attrs["width"]), pxLen(attrs["height"])))
                 }
                 "br" -> emit(MdHardBreak)
                 "a", in WRAP_TAGS -> if (!selfClosed) {
@@ -431,8 +431,12 @@ internal object HtmlAdapters {
             ?: el.attrs["srcset"]?.trim()?.substringBefore(' ')
             ?: el.attrs["data-src"]
             ?: ""
-        return MdImage(decodeEntities(src), decodeEntities(el.attrs["alt"] ?: ""))
+        return MdImage(decodeEntities(src), decodeEntities(el.attrs["alt"] ?: ""), pxLen(el.attrs["width"]), pxLen(el.attrs["height"]))
     }
+
+    /** HTML px length → dp hint; percentages and junk values are ignored. */
+    private fun pxLen(v: String?): Int? =
+        v?.trim()?.removeSuffix("px")?.toIntOrNull()?.takeIf { it in 8..2000 }
 
     private fun flattenText(el: Element): String = buildString {
         for (c in el.children) {
