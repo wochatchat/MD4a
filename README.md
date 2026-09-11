@@ -41,13 +41,33 @@ Md4aDocument(
 val blocks: List<MdBlock> = Md4a.parse(markdown) // 纯 Kotlin AST，可缓存/可自渲染
 ```
 
+### 解析引擎：Kotlin / C（JNI）双实现
+
+MD4a 自带两套解析引擎，输出同一套 `MdBlock` AST，可随时切换：
+
+| 引擎 | 实现 | 适用场景 |
+|------|------|----------|
+| `KOTLIN` | commonmark-java（纯 Kotlin/JVM） | 默认；无 NDK 顾虑，JVM 单元测试可用 |
+| `NATIVE` | md4c + JNI（C） | 大文档：解析快 2~4 倍（端到端），1MB 文档从 ~120ms 降到 ~60ms 以内 |
+| `AUTO` | native 优先，`.so` 不可用时静默回落 Kotlin | 推荐生产环境使用 |
+
+```kotlin
+val blocks = Md4a.parse(markdown, Md4a.Engine.NATIVE)
+
+// Compose 入口同样支持：
+Md4aDocument(markdown = readmeText, engine = Md4a.Engine.AUTO)
+```
+
+`.so` 覆盖 armeabi-v7a / arm64-v8a / x86 / x86_64；C 侧源码在 `md4a/src/main/cpp/`（vendored [md4c](https://github.com/mity/md4c)，MIT）。已知方言差异：`www.` 自动链接会补全 `http://` 前缀（与 GitHub cmark-gfm 一致），个别 autolink 边界与 commonmark-java 略有出入。
+
 `Md4aBlocks(blocks)` 接收预解析的 AST；`Md4aColorScheme` / `Md4aTypography` 可完全自定义主题。
 
 ## Demo App 使用
 
 1. 顶部输入框填 `owner/repo`、GitHub 仓库链接或任意 raw markdown URL → **打开**
 2. **🎲 随机**：从 stars>8000 的仓库里随机抓一个 README 展示
-3. 不联网也能看内置示例（覆盖全部 GFM 特性）
+3. **Kotlin / C (JNI)**：切换解析引擎，实时显示 parse 毫秒数对比；**🧪 长文档** 加载 25 倍拼接的内置示例做压力对比
+4. 不联网也能看内置示例（覆盖全部 GFM 特性）
 
 ## 构建
 

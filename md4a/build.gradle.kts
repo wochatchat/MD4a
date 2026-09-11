@@ -12,6 +12,9 @@ android {
     defaultConfig {
         minSdk = 26
         consumerProguardFiles("consumer-rules.pro")
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        }
     }
 
     buildTypes {
@@ -68,6 +71,11 @@ afterEvaluate {
                 artifactId = "md4a"
                 version = "0.1.0"
                 from(components["release"])
+            }
+        }
+    }
+}
+elease"])
             }
         }
     }

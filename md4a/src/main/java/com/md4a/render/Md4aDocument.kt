@@ -82,9 +82,10 @@ fun Md4aDocument(
     typography: Md4aTypography = remember { Md4aTypography.default() },
     baseUrl: String? = null,
     onLinkClick: (String) -> Unit = {},
+    engine: Md4a.Engine = Md4a.Engine.KOTLIN,
 ) {
-    val blocks by produceState<List<MdBlock>?>(initialValue = null, markdown) {
-        value = withContext(Dispatchers.Default) { Md4a.parse(markdown) }
+    val blocks by produceState<List<MdBlock>?>(initialValue = null, markdown, engine) {
+        value = withContext(Dispatchers.Default) { Md4a.parse(markdown, engine) }
     }
     when (val result = blocks) {
         null -> Box(modifier.fillMaxWidth().heightIn(min = 120.dp), contentAlignment = Alignment.Center) {

@@ -30,13 +30,13 @@ import org.commonmark.node.Node
  */
 internal object HtmlAdapters {
 
-    private val TAG_RE =
+    internal val TAG_RE =
         Regex("""<\s*(/?)\s*([a-zA-Z][a-zA-Z0-9-]*)((?:"[^"]*"|'[^']*'|[^>"'])*)\s*(/?)\s*>""")
     private val ATTR_RE =
         Regex("""([a-zA-Z_:][-a-zA-Z0-9_:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))""")
     private val ALIGN_STYLE_RE = Regex("""text-align\s*:\s*(center|right|left)""")
 
-    private val VOID_TAGS = setOf(
+    internal val VOID_TAGS = setOf(
         "img", "br", "hr", "input", "meta", "link", "source", "area", "base", "col", "embed", "track", "wbr",
     )
 
@@ -157,13 +157,13 @@ internal object HtmlAdapters {
         }
 
         companion object {
-            private val WRAP_TAGS = setOf("b", "strong", "i", "em", "cite", "var", "s", "strike", "del", "code", "kbd", "samp")
+            internal val WRAP_TAGS = setOf("b", "strong", "i", "em", "cite", "var", "s", "strike", "del", "code", "kbd", "samp")
         }
     }
 
     // ── Attribute / entity helpers ──────────────────────────────────────
 
-    private fun parseAttrs(raw: String): Map<String, String> =
+    internal fun parseAttrs(raw: String): Map<String, String> =
         ATTR_RE.findAll(raw).associate {
             it.groupValues[1].lowercase() to (it.groupValues[2].ifEmpty { it.groupValues[3].ifEmpty { it.groupValues[4] } })
         }
@@ -435,7 +435,7 @@ internal object HtmlAdapters {
     }
 
     /** HTML px length → dp hint; percentages and junk values are ignored. */
-    private fun pxLen(v: String?): Int? =
+    internal fun pxLen(v: String?): Int? =
         v?.trim()?.removeSuffix("px")?.toIntOrNull()?.takeIf { it in 8..2000 }
 
     private fun flattenText(el: Element): String = buildString {
