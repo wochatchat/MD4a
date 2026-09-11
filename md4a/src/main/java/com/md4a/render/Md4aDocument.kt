@@ -268,19 +268,20 @@ fun Md4aImage(
     // Size precedence: explicit width/height attr > badge heuristic > intrinsic ratio.
     // Tall/square images (ratio < 1.4) are capped at 260dp height instead of
     // being blown up to full screen width (SVG logos without width attr).
+    val r = ratio
     val sizeModifier = when {
         widthDp != null -> Modifier
             .width(widthDp.coerceAtMost(340).dp)
             .then(
-                if (ratio != null) Modifier.height((widthDp / ratio).dp)
+                if (r != null) Modifier.height((widthDp / r).dp)
                 else Modifier.heightIn(min = 24.dp, max = 260.dp)
             )
         heightDp != null -> Modifier
             .height(heightDp.coerceAtMost(260).dp)
-            .then(if (ratio != null) Modifier.aspectRatio(ratio) else Modifier.fillMaxWidth())
+            .then(if (r != null) Modifier.aspectRatio(r) else Modifier.fillMaxWidth())
         isBadge -> Modifier.height(22.dp)
-        ratio != null && ratio >= 1.4f -> Modifier.fillMaxWidth().aspectRatio(ratio)
-        ratio != null -> Modifier.height(260.dp).aspectRatio(ratio)
+        r != null && r >= 1.4f -> Modifier.fillMaxWidth().aspectRatio(r)
+        r != null -> Modifier.height(260.dp).aspectRatio(r)
         else -> Modifier.fillMaxWidth().heightIn(min = 60.dp, max = 260.dp)
     }
     AsyncImage(
