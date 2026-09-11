@@ -176,6 +176,26 @@ internal object HtmlAdapters {
         "rarr" to "→", "larr" to "←", "harr" to "↔", "check" to "✓", "star" to "★",
         "eacute" to "é", "egrave" to "è", "agrave" to "à", "ccedil" to "ç", "uuml" to "ü",
         "ouml" to "ö", "auml" to "ä", "szlig" to "ß", "ntilde" to "ñ",
+        // frequent in real-world READMEs (spacing, quotes, symbols, math)
+        "ensp" to " ", "emsp" to " ", "thinsp" to " ",
+        "zwnj" to "", "zwj" to "", "lrm" to "", "rlm" to "",
+        "lsquo" to "‘", "rsquo" to "’", "ldquo" to "“", "rdquo" to "”",
+        "sbquo" to "‚", "bdquo" to "„", "lsaquo" to "‹", "rsaquo" to "›",
+        "dagger" to "†", "Dagger" to "‡", "permil" to "‰",
+        "cent" to "¢", "pound" to "£", "yen" to "¥", "euro" to "€",
+        "sect" to "§", "para" to "¶", "macr" to "¯", "cedil" to "¸",
+        "sup1" to "¹", "sup2" to "²", "sup3" to "³", "frac12" to "½", "frac14" to "¼", "frac34" to "¾",
+        "half" to "½", "infin" to "∞", "ne" to "≠", "le" to "≤", "ge" to "≥", "minus" to "−",
+        "lowast" to "∗", "radic" to "√", "prop" to "∝", "ang" to "∠", "and" to "∧", "or" to "∨",
+        "cap" to "∩", "cup" to "∪", "int" to "∫", "there4" to "∴", "sim" to "∼", "cong" to "≅",
+        "asymp" to "≈", "equiv" to "≡", "sub" to "⊂", "sup" to "⊃", "nsub" to "⊄", "sube" to "⊆", "supe" to "⊇",
+        "oplus" to "⊕", "otimes" to "⊗", "perp" to "⊥", "sdot" to "⋅", "lceil" to "⌈", "rceil" to "⌉",
+        "lfloor" to "⌊", "rfloor" to "⌋", "lang" to "〈", "rang" to "〉", "loz" to "◊", "spades" to "♠",
+        "clubs" to "♣", "hearts" to "♥", "diams" to "♦", "alpha" to "α", "beta" to "β", "gamma" to "γ",
+        "delta" to "δ", "epsilon" to "ε", "theta" to "θ", "lambda" to "λ", "mu" to "μ", "pi" to "π",
+        "rho" to "ρ", "sigma" to "σ", "phi" to "φ", "omega" to "ω", "Alpha" to "Α", "Beta" to "Β",
+        "Gamma" to "Γ", "Delta" to "Δ", "Theta" to "Θ", "Lambda" to "Λ", "Mu" to "Μ", "Pi" to "Π",
+        "Sigma" to "Σ", "Phi" to "Φ", "Omega" to "Ω", "sigmaf" to "ς", "upsih" to "ϒ", "piv" to "ϖ",
     )
 
     fun decodeEntities(s: String): String = buildString(s.length) {

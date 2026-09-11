@@ -187,7 +187,11 @@ internal object Md4aEventDecoder {
 
     /** Code-block text goes to the [CodeCtx] accumulator, other text to the current inline sink. */
     private fun textEvent(stack: ArrayDeque<Ctx>, r: Reader) {
-        val s = r.str()
+        var s = r.str()
+        // GFM tables: `\|` inside a cell's code span is a literal pipe (md4c leaves it escaped).
+        if (s.contains("\\|") && stack.any { it is TableCtx } && inlineSink(stack).inCodeSpan()) {
+            s = s.replace("\\|", "|")
+        }
         val top = stack.lastOrNull()
         if (top is CodeCtx) top.sb.append(s) else inlineSink(stack).text(s)
     }

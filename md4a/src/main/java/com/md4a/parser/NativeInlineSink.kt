@@ -20,7 +20,7 @@ internal class NativeInlineSink {
 
     private enum class Mode { LINK, STRONG, EM, STRIKE, CODE, IMG }
 
-    private class Frame(val mode: Mode, val url: String?) {
+    private class Frame(val mode: Mode, val url: String?, val title: String? = null) {
         val children = mutableListOf<MdInline>()
     }
 
@@ -72,7 +72,7 @@ internal class NativeInlineSink {
             Kind.EM -> Frame(Mode.EM, null)
             Kind.STRONG -> Frame(Mode.STRONG, null)
             Kind.STRIKE -> Frame(Mode.STRIKE, null)
-            Kind.LINK -> Frame(Mode.LINK, url)
+            Kind.LINK -> Frame(Mode.LINK, url, title)
             Kind.IMG -> Frame(Mode.IMG, url)
             Kind.CODE -> Frame(Mode.CODE, null)
         })
@@ -81,6 +81,9 @@ internal class NativeInlineSink {
     fun spanEnd() {
         closeFrame()
     }
+
+    /** True while collecting text for a code span (used for GFM table `\|` unescaping). */
+    fun inCodeSpan(): Boolean = stack.lastOrNull()?.mode == Mode.CODE
 
     fun finish(): List<MdInline> {
         // Unclosed tags/frames at end of sequence: unwrap, keep their content.
@@ -97,7 +100,7 @@ internal class NativeInlineSink {
     private fun closeFrame() {
         val frame = stack.removeLastOrNull() ?: return
         when (frame.mode) {
-            Mode.LINK -> emit(MdLink(frame.children, frame.url ?: "", null))
+            Mode.LINK -> emit(MdLink(frame.children, frame.url ?: "", frame.title))
             Mode.STRONG -> emit(MdEmphasis(true, frame.children))
             Mode.EM -> emit(MdEmphasis(false, frame.children))
             Mode.STRIKE -> emit(MdStrikethrough(frame.children))
