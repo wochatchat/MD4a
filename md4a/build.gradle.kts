@@ -32,6 +32,12 @@ android {
     buildFeatures {
         compose = true
     }
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
     publishing {
         singleVariant("release") {
             withSourcesJar()
@@ -71,11 +77,6 @@ afterEvaluate {
                 artifactId = "md4a"
                 version = "0.1.0"
                 from(components["release"])
-            }
-        }
-    }
-}
-elease"])
             }
         }
     }
